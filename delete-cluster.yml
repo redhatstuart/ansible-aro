@@ -1,0 +1,13 @@
+- hosts: localhost
+  connection: local
+  vars_files:
+    - vars.yml
+  roles:
+    - ./modules
+  tasks:
+    - name: Create openshift cluster 
+      azure_rm_openshiftmanagedcluster:
+        resource_group: "{{ resource_group }}"
+        name: "{{ cluster_name  }}"
+        location: "eastus"
+        state: absent

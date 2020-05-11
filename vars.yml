@@ -1,0 +1,9 @@
+client_id: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+client_secret: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+cluster_name: mycluster
+resource_group: mycluster-eastus
+cluster_resource_group: /subscriptions/f64d4ee8-be94-457d-ba26-3fa6b6506cef/resourceGroups/mycluster-eastus-cluster
+vent_id: /subscriptions/f64d4ee8-be94-457d-ba26-3fa6b6506cef/resourceGroups/mycluster-eastus/Microsoft.Network/virtualNetworks/mycluster-vnet
+worker_subnet_id: /subscriptions/f64d4ee8-be94-457d-ba26-3fa6b6506cef/resourceGroups/mycluster-eastus/providers/Microsoft.Network/virtualNetworks/mycluster-vnet/subnets/mycluster-worker
+master_subnet_id: /subscriptions/f64d4ee8-be94-457d-ba26-3fa6b6506cef/resourceGroups/mycluster-eastus/providers/Microsoft.Network/virtualNetworks/mycluster-vnet/subnets/mycluster-master

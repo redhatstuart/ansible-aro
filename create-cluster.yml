@@ -1,0 +1,29 @@
+- hosts: localhost
+  connection: local
+  vars_files:
+    - vars.yml
+  roles:
+    - ./modules
+  tasks:
+    - name: Create openshift cluster 
+      azure_rm_openshiftmanagedcluster:
+        resource_group: "{{ resource_group }}"
+        name: "{{ cluster_name }}"
+        location: "eastus"
+        cluster_profile:
+          resource_group_id: "{{ cluster_resource_group }}"
+          domain: "{{ cluster_name }}"
+        service_principal_profile:
+          client_id: "{{ client_id }}"
+          client_secret: "{{ client_secret }}"
+        network_profile:
+          pod_cidr: "10.128.0.0/14"
+          service_cidr: "172.30.0.0/16"
+        worker_profiles:
+          - vm_size : "Standard_D4s_v3"
+            subnet_id : "{{ worker_subnet_id }}"
+            disk_size : 128
+            count : 3 
+        master_profile:
+          vm_size : "Standard_D8s_v3"
+          subnet_id: "{{ master_subnet_id }}"

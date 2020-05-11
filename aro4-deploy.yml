@@ -1,0 +1,89 @@
+- name: Prerequisites for Ansible Demos
+  hosts: localhost
+  connection: local
+
+  roles:
+    - ./modules
+
+  vars:
+      azure_dc: "eastus"
+      cluster_name: "aro4-ansible"
+      resource_group: "aro4-ansible"
+      aro_vnet: "AROVNet"
+      aro_master_subnet: "AROMasterSubnet"
+      aro_worker_subnet: "AROWorkerSubnet"
+      cluster_resource_group: "/subscriptions/$SUBID/resourceGroups/$RESOURCE_GROUP-cluster"
+      vent_id: "/subscriptions/{{ lookup('env', 'AZURE_SUBSCRIPTION_ID') }}/resourceGroups/{{ resource_group }}/Microsoft.Network/virtualNetworks/{{ aro_vnet }}"
+      worker_subnet_id: "/subscriptions/{{ lookup('env', 'AZURE_SUBSCRIPTION_ID') }}/resourceGroups/{{resource_group}}/providers/Microsoft.Network/virtualNetworks/{{ aro_vnet }}/subnets/{{ aro_worker_subnet }}"
+      master_subnet_id: "/subscriptions/{{ lookup('env', 'AZURE_SUBSCRIPTION_ID') }}/resourceGroups/{{resource_group}}/providers/Microsoft.Network/virtualNetworks/{{ aro_vnet }}/subnets/{{ aro_master_subnet }}"
+
+  tasks:
+
+#  - name: First make sure resource group is empty
+#    azure_rm_resourcegroup:
+#      name: "{{ resource_group }}"
+#      location: "{{ azure_dc }}"
+#      force: yes
+#      state: absent
+
+  - name: Create a new resource group
+    azure_rm_resourcegroup:
+      name: "{{ resource_group }}"
+      location: "{{  azure_dc }}"
+
+  - name: Create ARO Vnet
+    azure_rm_virtualnetwork:
+      resource_group: "{{ resource_group }}"
+      name: "{{ aro_vnet }}"
+      address_prefixes: "100.100.0.0/16"
+
+# need to insert azure_rm_virtualnetwork_info to get resource ID of vnet
+
+  - name: Create ARO Master Subnet
+    azure_rm_subnet:
+      resource_group: "{{ resource_group }}"
+      name: "{{ aro_master_subnet }}"
+      address_prefix: "100.100.10.0/24"
+      virtual_network: "{{ aro_vnet }}"
+
+  - name: Create ARO Worker Subnet
+    azure_rm_subnet:
+      resource_group: "{{ resource_group }}"
+      name: "{{ aro_worker_subnet }}"
+      address_prefix: "100.100.20.0/24"
+      virtual_network: "{{ aro_vnet }}"
+
+# Need to insert azure_rm_subnet_info to get resource IDs of subnets
+
+
+
+  - name: Create openshift cluster
+    azure_rm_openshiftmanagedcluster:
+      resource_group: "{{ resource_group }}"
+      name: "{{ cluster_name }}"
+      location: "{{ azure_dc }}"
+      cluster_profile:
+        resource_group_id: "{{ resource_group }}-cluster"
+#        pull_secret: ""
+#        domain: "{{ cluster_name }}"
+#      service_principal_profile:
+#        client_id: "{{ client_id }}"
+#        client_secret: "{{ client_secret }}"
+#      network_profile:
+#        pod_cidr: "10.128.0.0/14"
+#        service_cidr: "172.30.0.0/16"
+      worker_profiles:
+        vm_size : "Standard_D4s_v3"
+        subnet_id : "{{ worker_subnet_id }}"
+        disk_size : 128
+        count : 3
+      master_profile:
+        vm_size : "Standard_D8s_v3"
+        subnet_id: "{{ master_subnet_id }}"
+#     ingress_profiles:
+#        visibility: "Public"
+#      api_server_profile:
+#        visibility: "Public"
+
+
+
