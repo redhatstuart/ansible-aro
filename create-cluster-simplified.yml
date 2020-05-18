@@ -1,0 +1,20 @@
+- hosts: localhost
+  connection: local
+  vars_files:
+    - vars.yml
+  roles:
+    - ./modules
+  tasks:
+    - name: Create openshift cluster 
+      azure_rm_openshiftmanagedcluster:
+        resource_group: "{{ resource_group }}"
+        name: "{{ cluster_name }}"
+        location: "eastus"
+        service_principal_profile:
+          client_id: "{{ client_id }}"
+          client_secret: "{{ client_secret }}"
+        worker_profiles:
+          - subnet_id : "{{ worker_subnet_id }}"
+            count : 3 
+        master_profile:
+          subnet_id: "{{ master_subnet_id }}"
