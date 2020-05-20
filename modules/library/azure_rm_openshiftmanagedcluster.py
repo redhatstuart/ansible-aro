@@ -49,9 +49,9 @@ options:
       domain:
         description:
           - The domain for the cluster (immutable).
-#        required: true
+        required: true
         type: str
-      resource_group_id:
+      cluster_resource_group_id:
         description:
           - The ID of the cluster resource group (immutable).
         required: true
@@ -86,6 +86,7 @@ options:
         description:
           - CIDR for OpenShift Services (immutable).
         type: str
+    default: "{'podCidr' : '10.128.0.0/14', 'serviceCidr' : '172.30.0.0/16'}"
   master_profile:
     description:
       - Configuration for OpenShift master VMs.
@@ -106,13 +107,13 @@ options:
   worker_profiles:
     description:
       - Configuration for OpenShift worker Vms.
-    type: dict 
+    type: list
     suboptions:
-#      name:
-#        description: name of the worker profile (immutable).
-#        type: str
-#        choices:
-#          - worker
+      name:
+        description: name of the worker profile (immutable).
+        type: str
+        choices:
+          - worker
       vm_size:
         description:
           - The size of the worker Vms (immutable).
@@ -277,12 +278,12 @@ properties:
       returned: always
       type: dict
       contains:
-#        domain:
-#          description:
-#            - domain for the cluster
-#          returned: always
-#          type: str
-#          sample: null
+        domain:
+          description:
+            - domain for the cluster
+          returned: always
+          type: str
+          sample: null
         version:
           description:
             - Openshift version
@@ -348,13 +349,13 @@ properties:
       type: dict
       sample: null
       contains:
-#        name:
-#          description:
-#            - Unique name of the pool profile in the context of the subscription
-#              and resource group.
-#          returned: always
-#          type: str
-#          sample: worker
+        name:
+          description:
+            - Unique name of the pool profile in the context of the subscription
+              and resource group.
+          returned: always
+          type: str
+          sample: worker
         count:
           description:
             - Number of agents (VMs) to host docker containers.
@@ -467,45 +468,47 @@ class AzureRMOpenShiftManagedClusters(AzureRMModuleBaseExt):
                       type='str',
                       updatable=False,
                       disposition='pullSecret',
-                      default=''
+                      purgeIfNone= True
                   ),
-                  resource_group_id=dict(
+                  cluster_resource_group_id=dict(
                       type='str',
                       updatable=False,
                       disposition='resourceGroupId',
-                      required=True
+                      purgeIfNone=True
                   ),
                   domain=dict(
                       type='str',
                       updatable=False,
                       disposition='domain',
-#                      required=True
+                      purgeIfNone=True
                   ),
                   version=dict(
                       type='str',
                       updatable=False,
-                      disposition='version'
+                      disposition='version',
+                      purgeIfNone=True
                   )
-              )
+              ),
+              default=dict()
             ),
-#            service_principal_profile=dict(
-#                type='dict',
-#                disposition='/properties/servicePrincipalProfile',
-#                options=dict(
-#                    client_id=dict(
-#                        type='str',
-#                        updatable=False,
-#                        disposition='clientId',
-#                        required=True
-#                    ),
-#                    client_secret=dict(
-#                        type='str',
-#                        updatable=False,
-#                        disposition='clientSecret',
-#                        required=True
-#                    )
-#                )
-#            ),
+            service_principal_profile=dict(
+                type='dict',
+                disposition='/properties/servicePrincipalProfile',
+                options=dict(
+                    client_id=dict(
+                        type='str',
+                        updatable=False,
+                        disposition='clientId',
+                        required=True
+                    ),
+                    client_secret=dict(
+                        type='str',
+                        updatable=False,
+                        disposition='clientSecret',
+                        required=True
+                    )
+                )
+            ),
             network_profile=dict(
                 type='dict',
                 disposition='/properties/networkProfile',
@@ -513,15 +516,17 @@ class AzureRMOpenShiftManagedClusters(AzureRMModuleBaseExt):
                     pod_cidr=dict(
                         type='str',
                         updatable=False,
-                        disposition='podCidr',
-                        required=True
+                        disposition='podCidr'
                     ),
                     service_cidr=dict(
                         type='str',
                         updatable=False,
-                        disposition='serviceCidr',
-                        required=True
+                        disposition='serviceCidr'
                     )
+                ),
+                default= dict(
+                    pod_cidr="10.128.0.0/14",
+                    service_cidr="172.30.0.0/16"
                 )
             ),
             master_profile=dict(
@@ -535,7 +540,7 @@ class AzureRMOpenShiftManagedClusters(AzureRMModuleBaseExt):
                         choices=['Standard_D2s_v3',
                                  'Standard_D4s_v3',
                                  'Standard_D8s_v3'],
-                        required=True
+                        purgeIfNone=True
                     ),
                     subnet_id=dict(
                         type='str',
@@ -546,21 +551,21 @@ class AzureRMOpenShiftManagedClusters(AzureRMModuleBaseExt):
                 )
             ),
             worker_profiles=dict(
-                type='dict',
+                type='list',
                 disposition='/properties/workerProfiles',
                 options=dict(
-#                    name=dict(
-#                        type='str',
-#                        disposition='name',
-#                        updatable=False,
-#                        required=True,
-#                        choices=['worker']
-#                    ),
+                    name=dict(
+                        type='str',
+                        disposition='name',
+                        updatable=False,
+                        required=True,
+                        choices=['worker']
+                    ),
                     count=dict(
                         type='int',
                         disposition='count',
                         updatable=False,
-                        required=True
+                        purgeIfNone=True
                     ),
                     vm_size=dict(
                         type='str',
@@ -569,7 +574,7 @@ class AzureRMOpenShiftManagedClusters(AzureRMModuleBaseExt):
                         choices=['Standard_D2s_v3',
                                  'Standard_D4s_v3',
                                  'Standard_D8s_v3'],
-                        required=True
+                        purgeIfNone=True
                     ),
                     subnet_id=dict(
                         type='str',
@@ -581,7 +586,7 @@ class AzureRMOpenShiftManagedClusters(AzureRMModuleBaseExt):
                         type='int',
                         disposition='diskSizeGB',
                         updatable=False,
-                        required=True
+                        purgeIfNone=True
                     )
                 )
             ),
@@ -756,13 +761,11 @@ class AzureRMOpenShiftManagedClusters(AzureRMModuleBaseExt):
     def create_update_resource(self):
 
         if self.to_do == Actions.Create:
-#            required_profile_for_creation = ["workerProfiles", "clusterProfile", "servicePrincipalProfile", "masterProfile"]
-            required_profile_for_creation = ["workerProfiles", "clusterProfile", "masterProfile"]
+            required_profile_for_creation = ["workerProfiles", "clusterProfile", "servicePrincipalProfile", "masterProfile"]
 
             if 'properties' not in self.body:
                 self.fail('{0} are required for creating a openshift cluster'.format(
-#                    '[worker_profile, cluster_profile, service_principal_profile, master_profile]'))
-                    '[worker_profile, cluster_profile, master_profile]'))
+                    '[worker_profile, cluster_profile, service_principal_profile, master_profile]'))
             for profile in required_profile_for_creation:
                 if profile not in self.body['properties']:
                     self.fail('{0} is required for creating a openshift cluster'.format(profile))
@@ -782,7 +785,6 @@ class AzureRMOpenShiftManagedClusters(AzureRMModuleBaseExt):
             self.log('Error attempting to create the OpenShiftManagedCluster instance.')
             self.fail('Error creating the OpenShiftManagedCluster instance: {0}'.format(str(self.body)))
             self.fail('Error creating the OpenShiftManagedCluster instance: {0}'.format(str(exc)))
-
         try:
             response = json.loads(response.text)
         except Exception:
@@ -832,6 +834,10 @@ class AzureRMOpenShiftManagedClusters(AzureRMModuleBaseExt):
 
         return False
 
+    def random_id(self):
+        import random
+        return ''.join(random.choice('abcdefghijklmnopqrstuvwxyz0123456789') for _ in range(8))
+
     def set_default(self):
         if 'apiServerProfile' not in self.body['properties']:
             api_profile = dict(visibility="Public")
@@ -841,9 +847,19 @@ class AzureRMOpenShiftManagedClusters(AzureRMModuleBaseExt):
             self.body['properties']['ingressProfiles'] = [ingress_profile]
         if 'name' not in self.body['properties']['workerProfiles'][0]:
             self.body['properties']['workerProfiles'][0]['name'] = 'worker'
+        if 'vmSize' not in self.body['properties']['workerProfiles'][0]:
+            self.body['properties']['workerProfiles'][0]['vmSize'] = "Standard_D4s_v3"
+        if 'diskSizeGB' not in self.body['properties']['workerProfiles'][0]:
+            self.body['properties']['workerProfiles'][0]['diskSizeGB'] = 128
+        if 'vmSize' not in self.body['properties']['masterProfile']:
+            self.body['properties']['masterProfile']['vmSize'] = "Standard_D8s_v3"
+
         if 'pullSecret' not in self.body['properties']['clusterProfile']:
             self.body['properties']['clusterProfile']['pullSecret'] = ''
-
+        if 'resourceGroupId' not in self.body['properties']['clusterProfile']:
+            self.body['properties']['clusterProfile']['resourceGroupId'] = "/subscriptions/" + self.subscription_id + "/resourceGroups/" + self.name + "-cluster"
+        if 'domain' not in self.body['properties']['clusterProfile']:
+            self.body['properties']['clusterProfile']['domain'] = self.random_id()
 
 def main():
     AzureRMOpenShiftManagedClusters()
