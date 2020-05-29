@@ -1,4 +1,4 @@
-- name: Prerequisites for Ansible Demos
+- name: Deploy Azure Red Hat OpenShift 4.x
   hosts: localhost
   connection: local
 
@@ -12,46 +12,71 @@
       aro_vnet: "AROVNet"
       aro_master_subnet: "AROMasterSubnet"
       aro_worker_subnet: "AROWorkerSubnet"
+      aro_vnet_cidr: "100.100.0.0/16"
+      aro_master_subnet_cidr: "100.100.10.0/24"
+      aro_worker_subnet_cidr: "100.100.20.0/24"
       cluster_resource_group: "/subscriptions/$SUBID/resourceGroups/$RESOURCE_GROUP-cluster"
-      vnet_id: "/subscriptions/{{ lookup('env', 'AZURE_SUBSCRIPTION_ID') }}/resourceGroups/{{ resource_group }}/Microsoft.Network/virtualNetworks/{{ aro_vnet }}"
+      vent_id: "/subscriptions/{{ lookup('env', 'AZURE_SUBSCRIPTION_ID') }}/resourceGroups/{{ resource_group }}/Microsoft.Network/virtualNetworks/{{ aro_vnet }}"
       worker_subnet_id: "/subscriptions/{{ lookup('env', 'AZURE_SUBSCRIPTION_ID') }}/resourceGroups/{{resource_group}}/providers/Microsoft.Network/virtualNetworks/{{ aro_vnet }}/subnets/{{ aro_worker_subnet }}"
       master_subnet_id: "/subscriptions/{{ lookup('env', 'AZURE_SUBSCRIPTION_ID') }}/resourceGroups/{{resource_group}}/providers/Microsoft.Network/virtualNetworks/{{ aro_vnet }}/subnets/{{ aro_master_subnet }}"
 
   tasks:
 
-#  - name: First make sure resource group is empty
-#    azure_rm_resourcegroup:
-#      name: "{{ resource_group }}"
-#      location: "{{ azure_dc }}"
-#      force: yes
-#      state: absent
-
-  - name: Create a new resource group
+  - name: Creating Resource Group
     azure_rm_resourcegroup:
       name: "{{ resource_group }}"
       location: "{{  azure_dc }}"
 
-  - name: Create ARO Vnet
+  - name: Creating Virtual Network
     azure_rm_virtualnetwork:
       resource_group: "{{ resource_group }}"
       name: "{{ aro_vnet }}"
-      address_prefixes: "100.100.0.0/16"
+      address_prefixes: "{{ aro_vnet_cidr }}"
 
 # need to insert azure_rm_virtualnetwork_info to get resource ID of vnet
 
-  - name: Create ARO Master Subnet
+  - name: Creating 'Master' Subnet
     azure_rm_subnet:
       resource_group: "{{ resource_group }}"
       name: "{{ aro_master_subnet }}"
-      address_prefix: "100.100.10.0/24"
+      address_prefix: "{{ aro_master_subnet_cidr }}"
       virtual_network: "{{ aro_vnet }}"
 
-  - name: Create ARO Worker Subnet
+  - name: Creating 'Worker' Subnet
     azure_rm_subnet:
       resource_group: "{{ resource_group }}"
       name: "{{ aro_worker_subnet }}"
-      address_prefix: "100.100.20.0/24"
+      address_prefix: "{{ aro_worker_subnet_cidr }}"
       virtual_network: "{{ aro_vnet }}"
+
+  - name: Disabling 'PrivateLinkServiceNetworkPolicies' in 'Master' Subnet
+    azure_rm_resource:
+        url: https://management.azure.com/subscriptions/{{ lookup('env', 'AZURE_SUBSCRIPTION_ID') }}/resourceGroups/{{ resource_group }}/providers/Microsoft.Network/virtualNetworks/{{ aro_vnet }}/subnets/{{ aro_master_subnet }}?api-version=2020-03-01
+        body: { "id": "/subscriptions/{{ lookup('env', 'AZURE_SUBSCRIPTION_ID') }}/resourceGroups/{{ resource_group }}/providers/Microsoft.Network/virtualNetworks/{{ aro_vnet }}/subnets/{{ aro_master_subnet }}",
+                 "properties": {"addressPrefix": "{{ aro_master_subnet_cidr }}", 
+                                "networkSecurityGroup": null,
+                                "delegations": [],
+                                "privateLinkServiceNetworkPolicies": "Disabled",
+                                "privateEndpointNetworkPolicies": "Enabled"}, 
+                 "name": "{{ aro_master_subnet }}"}
+
+  - name: Getting Public IP address of Master HPC Infrastructure Node
+    azure_rm_virtualnetwork_info:
+      resource_group: "{{ resource_group }}"
+      name: "{{ aro_vnet }}"
+    register: output
+
+  - debug:
+      var: output
+
+#  - name: Setting Public IP variable
+#    set_fact:
+#      mvn: "{{ output.virtualnetworks[0].subnets[1].id }}"
+
+#  - name: Setting Public IP variable
+#    set_fact:
+#      wvn: "{{ output.virtualnetworks[0].subnets[0].id }}"
+
 
 # Need to insert azure_rm_subnet_info to get resource IDs of subnets
 
@@ -63,23 +88,23 @@
       name: "{{ cluster_name }}"
       location: "{{ azure_dc }}"
       cluster_profile:
-        resource_group_id: "{{ resource_group }}-cluster"
-#        pull_secret: ""
+        cluster_resource_group_id: "{{ resource_group }}-cluster"
+        pull_secret: ""
 #        domain: "{{ cluster_name }}"
 #      service_principal_profile:
 #        client_id: "{{ client_id }}"
 #        client_secret: "{{ client_secret }}"
-#      network_profile:
-#        pod_cidr: "10.128.0.0/14"
-#        service_cidr: "172.30.0.0/16"
+      network_profile:
+        pod_cidr: "10.128.0.0/14"
+        service_cidr: "172.30.0.0/16"
       worker_profiles:
         vm_size : "Standard_D4s_v3"
         subnet_id : "{{ worker_subnet_id }}"
-        disk_size : 128
+#        disk_size : 128
         count : 3
-      master_profile:
-        vm_size : "Standard_D8s_v3"
-        subnet_id: "{{ master_subnet_id }}"
+#      master_profile:
+#        vm_size : "Standard_D8s_v3"
+#        subnet_id: "{{ master_subnet_id }}"
 #     ingress_profiles:
 #        visibility: "Public"
 #      api_server_profile:
