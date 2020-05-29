@@ -7,6 +7,8 @@
 
   vars:
       azure_dc: "eastus"
+      client_id: "dc7de353-ce5a-4235-91c3-530c336ea8c2"
+      client_secret: "INV~nL~.KVkjc7wj--OxN18WgNJBj5~fB7"
       cluster_name: "aro4-ansible"
       resource_group: "aro4-ansible"
       aro_vnet: "AROVNet"
@@ -91,20 +93,21 @@
         cluster_resource_group_id: "{{ resource_group }}-cluster"
         pull_secret: ""
 #        domain: "{{ cluster_name }}"
-#      service_principal_profile:
-#        client_id: "{{ client_id }}"
-#        client_secret: "{{ client_secret }}"
+      service_principal_profile:
+        client_id: "{{ client_id }}"
+        client_secret: "{{ client_secret }}"
       network_profile:
         pod_cidr: "10.128.0.0/14"
         service_cidr: "172.30.0.0/16"
       worker_profiles:
+        name: "worker"
         vm_size : "Standard_D4s_v3"
         subnet_id : "{{ worker_subnet_id }}"
 #        disk_size : 128
         count : 3
-#      master_profile:
-#        vm_size : "Standard_D8s_v3"
-#        subnet_id: "{{ master_subnet_id }}"
+      master_profile:
+        vm_size : "Standard_D8s_v3"
+        subnet_id: "{{ master_subnet_id }}"
 #     ingress_profiles:
 #        visibility: "Public"
 #      api_server_profile:
