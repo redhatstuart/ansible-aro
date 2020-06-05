@@ -1,9 +1,9 @@
-client_id: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-client_secret: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+client_id: "8f5f15d4-0812-40e5-ae4e-c9accd0770fa"
+client_secret: "o8S6-lN5SJX.UvJ_ENtjv6W_nex8lJsZUf"
 
 cluster_name: mycluster
 resource_group: mycluster-eastus
-cluster_resource_group: /subscriptions/f64d4ee8-be94-457d-ba26-3fa6b6506cef/resourceGroups/mycluster-eastus-cluster
-vent_id: /subscriptions/f64d4ee8-be94-457d-ba26-3fa6b6506cef/resourceGroups/mycluster-eastus/Microsoft.Network/virtualNetworks/mycluster-vnet
-worker_subnet_id: /subscriptions/f64d4ee8-be94-457d-ba26-3fa6b6506cef/resourceGroups/mycluster-eastus/providers/Microsoft.Network/virtualNetworks/mycluster-vnet/subnets/mycluster-worker
-master_subnet_id: /subscriptions/f64d4ee8-be94-457d-ba26-3fa6b6506cef/resourceGroups/mycluster-eastus/providers/Microsoft.Network/virtualNetworks/mycluster-vnet/subnets/mycluster-master
+cluster_resource_group: /subscriptions/ce6c1bf1-74b9-47e9-a1a3-c26922dd34db/resourceGroups/mycluster-eastus-cluster
+vent_id: /subscriptions/ce6c1bf1-74b9-47e9-a1a3-c26922dd34db/resourceGroups/mycluster-eastus/Microsoft.Network/virtualNetworks/mycluster-vnet
+worker_subnet_id: /subscriptions/ce6c1bf1-74b9-47e9-a1a3-c26922dd34db/resourceGroups/mycluster-eastus/providers/Microsoft.Network/virtualNetworks/mycluster-vnet/subnets/mycluster-worker
+master_subnet_id: /subscriptions/ce6c1bf1-74b9-47e9-a1a3-c26922dd34db/resourceGroups/mycluster-eastus/providers/Microsoft.Network/virtualNetworks/mycluster-vnet/subnets/mycluster-master
