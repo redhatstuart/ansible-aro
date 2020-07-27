@@ -1,3 +1,22 @@
+# Ansible Deployment Playbook
+# Azure Red Hat OpenShift 4.x
+#
+# Written by: Stuart Kirk <stuart.kirk@microsoft.com>
+# With contributions by: Haiyuan Zhang <haiyuan.zhang@microsoft.com>, Fred Sun <v-xisu@microsoft.com> & Zim Kalinowski <zikalino@microsoft.com>
+#
+# Notes:
+#
+# * Ansible's service principal must be an owner on the subscription in question - Contributor is not high enough access 
+# * A service principal with Contributor permission on the active subscription must be used below which can be obtained from the Azure Linux CLI
+# * ARO-RP role assignment cant already exist on VNET otherwise azure_rm_roleassignment module will fail - idempotency failure
+# * Must use azure_rm_resource to disable 'privateLinkServiceNetworkPolicies' as this is not natively available in the module azure_rm_subnet
+# * Must also include sections for the service endpoints in the azure_rm_resource task as without it, it will clear the task performed by the native module and palybook will fail
+# * Pull secret must be read from a file due to the hidden characters that are placed inside a variable, including a carriage return, which will cause the deploy to fail
+# * Worker node count must be an integer; Playbook will error if you use '' or "" to indicate a string. Thus you can also not set this in a variable and it must be hard-coded in the task
+# * Ingress profile must be named "default" - any other name will not work - Is it even necessary to have this declared in the playbook?
+# * Why are ingress profiles a list, however api profiles are not in the module?
+# * API & Ingress privacy must be "Public" or "Private" - case sensitive -- API privacy will revert to "Public" even if the variable is set to "Private" - needs to be fixed
+
 - name: Deploy Azure Red Hat OpenShift 4.x
   hosts: localhost
   connection: local
@@ -5,128 +24,145 @@
   roles:
     - ./modules
 
+  collections:
+    - azure.azcollection
+
   vars:
-      azure_dc: "eastus"
-      client_id: "8f5f15d4-0812-40e5-ae4e-c9accd0770fa"
-      client_secret: "o8S6-lN5SJX.UvJ_ENtjv6W_nex8lJsZUf"
-      cluster_name: "aro4-ansible"
-      resource_group: "aro4-ansible"
-      aro_vnet: "AROVNet"
+      # Customize These
       aro_master_subnet: "AROMasterSubnet"
-      aro_worker_subnet: "AROWorkerSubnet"
-      aro_vnet_cidr: "100.100.0.0/16"
       aro_master_subnet_cidr: "100.100.10.0/24"
+      aro_vnet: "AROVNet"
+      aro_vnet_cidr: "100.100.0.0/16"
+      aro_worker_subnet: "AROWorkerSubnet"
       aro_worker_subnet_cidr: "100.100.20.0/24"
-      cluster_resource_group: "/subscriptions/{{ lookup('env', 'AZURE_SUBSCRIPTION_ID') }}/resourceGroups/$RESOURCE_GROUP-cluster"
-      vent_id: "/subscriptions/{{ lookup('env', 'AZURE_SUBSCRIPTION_ID') }}/resourceGroups/{{ resource_group }}/Microsoft.Network/virtualNetworks/{{ aro_vnet }}"
+      azure_dc: "eastus"
+      client_id: "2e7acf27-4502-4d39-861b-aee2b035c029"
+      client_id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+      client_secret: "xxxxxxxxxxxx-xxxxxxxxxxx-xxxxxxxxx"
+      cluster_name: "ansible-cluster"
+      cluster_pull_secret: "{{ lookup('file', '~/openshift/aro4/pull-secret.txt') }}"
+#      customdns: "some.domain.com"
+      master_vm_size: "Standard_D8s_v3"
+      openshift_pull_secret: ""
+      network_pod_cidr: "10.128.0.0/14"
+      network_service_cidr: "172.30.0.0/16"
+      privacy_api: "Public"
+      privacy_ingress: "Public"
+      resource_group: "aro4-ansible"
+###      worker_node_count: "4" ### Doesn't work right now - see notes above.
+      worker_vm_size: "Standard_D4s_v3"
+
+      # Don't touch These
       worker_subnet_id: "/subscriptions/{{ lookup('env', 'AZURE_SUBSCRIPTION_ID') }}/resourceGroups/{{resource_group}}/providers/Microsoft.Network/virtualNetworks/{{ aro_vnet }}/subnets/{{ aro_worker_subnet }}"
       master_subnet_id: "/subscriptions/{{ lookup('env', 'AZURE_SUBSCRIPTION_ID') }}/resourceGroups/{{resource_group}}/providers/Microsoft.Network/virtualNetworks/{{ aro_vnet }}/subnets/{{ aro_master_subnet }}"
 
   tasks:
 
-  - name: Creating Resource Group
-    azure_rm_resourcegroup:
+  - name: Creating ARO Resource Group
+    azure.azcollection.azure_rm_resourcegroup:
       name: "{{ resource_group }}"
-      location: "{{  azure_dc }}"
+      location: "{{ azure_dc }}"
 
-  - name: Creating Virtual Network
-    azure_rm_virtualnetwork:
+  - name: Creating ARO Virtual Network
+    azure.azcollection.azure_rm_virtualnetwork:
       resource_group: "{{ resource_group }}"
       name: "{{ aro_vnet }}"
       address_prefixes: "{{ aro_vnet_cidr }}"
 
-# need to insert azure_rm_virtualnetwork_info to get resource ID of vnet
-
-  - name: Creating 'Master' Subnet
-    azure_rm_subnet:
+  - name: Creating ARO 'Master' Subnet
+    azure.azcollection.azure_rm_subnet:
       resource_group: "{{ resource_group }}"
       name: "{{ aro_master_subnet }}"
       address_prefix: "{{ aro_master_subnet_cidr }}"
       virtual_network: "{{ aro_vnet }}"
+      service_endpoints:
+        - service: Microsoft.ContainerRegistry
 
-  - name: Creating 'Worker' Subnet
-    azure_rm_subnet:
+  - name: Creating ARO 'Worker' Subnet
+    azure.azcollection.azure_rm_subnet:
       resource_group: "{{ resource_group }}"
       name: "{{ aro_worker_subnet }}"
       address_prefix: "{{ aro_worker_subnet_cidr }}"
       virtual_network: "{{ aro_vnet }}"
+      service_endpoints:
+        - service: Microsoft.ContainerRegistry
 
-  - name: Disabling 'PrivateLinkServiceNetworkPolicies' in 'Master' Subnet
-    azure_rm_resource:
+  - name: Obtain ARO Resource Group Role Definitions
+    azure.azcollection.azure_rm_roledefinition_info:
+      scope: "/subscriptions/{{ lookup('env', 'AZURE_SUBSCRIPTION_ID') }}/resourceGroups/{{ resource_group }}"
+    register: roledefs
+
+  - name: Obtain Object ID of Contributor Role Definition
+    set_fact:
+      fact: "{{ roledefs | json_query(jmesquery) }}"
+    register: roledefoutput
+    vars:
+      jmesquery: "roledefinitions[?role_name == 'Contributor'].[id]"
+
+  - name: Setting Object ID variable
+    set_fact:
+      oid: "{{ roledefoutput.ansible_facts.fact[0][0] }}"      
+
+  - name: Granting the ARO Resource Provider access to the ARO virtual network
+    azure.azcollection.azure_rm_roleassignment:
+      scope: "/subscriptions/{{ lookup('env', 'AZURE_SUBSCRIPTION_ID') }}/resourceGroups/{{ resource_group }}/providers/Microsoft.Network/virtualNetworks/{{ aro_vnet }}"
+      assignee_object_id: "50c17c64-bc11-4fdd-a339-0ecd396bf911"
+      role_definition_id: "{{ oid }}"
+      state: present
+
+  - name: Disabling 'PrivateLinkServiceNetworkPolicies' property in the ARO 'Master' Subnet
+    azure.azcollection.azure_rm_resource:
         url: https://management.azure.com/subscriptions/{{ lookup('env', 'AZURE_SUBSCRIPTION_ID') }}/resourceGroups/{{ resource_group }}/providers/Microsoft.Network/virtualNetworks/{{ aro_vnet }}/subnets/{{ aro_master_subnet }}?api-version=2020-03-01
         body: { "id": "/subscriptions/{{ lookup('env', 'AZURE_SUBSCRIPTION_ID') }}/resourceGroups/{{ resource_group }}/providers/Microsoft.Network/virtualNetworks/{{ aro_vnet }}/subnets/{{ aro_master_subnet }}",
                  "properties": {"addressPrefix": "{{ aro_master_subnet_cidr }}", 
                                 "networkSecurityGroup": null,
                                 "delegations": [],
                                 "privateLinkServiceNetworkPolicies": "Disabled",
-                                "privateEndpointNetworkPolicies": "Enabled"}, 
+                                "privateEndpointNetworkPolicies": "Enabled", 
+                                "serviceEndpoints": [ { "locations": [ "*" ],
+                                "service": "Microsoft.ContainerRegistry"} ]
+                                 },
                  "name": "{{ aro_master_subnet }}"}
 
-  - name: Getting Public IP address of Master HPC Infrastructure Node
-    azure_rm_virtualnetwork_info:
-      resource_group: "{{ resource_group }}"
-      name: "{{ aro_vnet }}"
-    register: output
-
-  - debug:
-      var: output
-
-#  - name: Setting Public IP variable
-#    set_fact:
-#      mvn: "{{ output.virtualnetworks[0].subnets[1].id }}"
-
-#  - name: Setting Public IP variable
-#    set_fact:
-#      wvn: "{{ output.virtualnetworks[0].subnets[0].id }}"
-
-
-# Need to insert azure_rm_subnet_info to get resource IDs of subnets
-
-
-#  - name: Create openshift cluster
-#    azure_rm_openshiftmanagedcluster:
-#      resource_group: "{{ resource_group }}"
-#      name: "{{ cluster_name }}"
-#      location: "{{ azure_dc }}"
-#      cluster_profile:
-#        cluster_resource_group_id: "{{ resource_group }}-cluster"
-#        pull_secret: ""
-##        domain: "{{ cluster_name }}"
-#      service_principal_profile:
-#        client_id: "{{ client_id }}"
-#        client_secret: "{{ client_secret }}"
-#      network_profile:
-#        pod_cidr: "10.128.0.0/14"
-#        service_cidr: "172.30.0.0/16"
-#      worker_profiles:
-#        name: "worker"
-#        vm_size : "Standard_D4s_v3"
-#        subnet_id : "{{ worker_subnet_id }}"
-##        disk_size : 128
-#        count : 3
-#      master_profile:
-#        vm_size : "Standard_D8s_v3"
-#        subnet_id: "{{ master_subnet_id }}"
-##     ingress_profiles:
-##        visibility: "Public"
-#      api_server_profile:
-#        visibility: "Public"
-
-  - name: Create openshift cluster
+  - name: Create Azure Red Hat OpenShift 4 Cluster
     azure_rm_openshiftmanagedcluster:
       resource_group: "{{ resource_group }}"
       name: "{{ cluster_name }}"
       location: "{{ azure_dc }}"
+      api_server_profile:
+        visibility: "{{ privacy_api }}"
+      cluster_profile:
+        pull_secret: "{{ openshift_pull_secret }}"
+#        domain: "{{ customdns }}"
+      ingress_profiles:
+        - name: "default"
+          visibility: "{{ privacy_ingress }}"
+      master_profile:
+        vm_size : "{{ master_vm_size }}"
+        subnet_id: "{{ master_subnet_id }}"
+      network_profile:
+        pod_cidr: "{{ network_pod_cidr }}"
+        service_cidr: "{{ network_service_cidr }}"
       service_principal_profile:
         client_id: "{{ client_id }}"
         client_secret: "{{ client_secret }}"
       worker_profiles:
-#        name: "worker"
-        - subnet_id : "{{ worker_subnet_id }}"
-          count : 3
-      master_profile:
-        subnet_id: "{{ master_subnet_id }}"
+        - name: "worker"
+          vm_size : "{{ worker_vm_size }}"
+          subnet_id: "{{ worker_subnet_id }}"
+          count: 4
 
+  - debug:
+      msg: "Azure Red Hat OpenShift takes roughly 30-40 minutes to provision."
 
+  - debug:
+      msg: "Cluster IP credentials can be obainted with: az aro show -n {{ cluster_name }} -g {{ resource_group }} -o jsonc --query '[apiserverProfile , consoleProfile , ingressProfiles]'"
 
+  - debug:
+      msg: "Kubeadmin credentials can be obtained with: az aro list-credentials -n {{ cluster_name }} -g {{ resource_group }} -o table"
+
+  - debug:
+      msg: "You can also view the cluster build status with: az aro list"
+
+# - end
 
