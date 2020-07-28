@@ -17,9 +17,9 @@ DOCUMENTATION = '''
 ---
 module: azure_rm_openshiftmanagedcluster
 version_added: '2.9'
-short_description: Manage Azure OpenShiftManagedCluster instance.
+short_description: Manage Azure Red Hat OpenShift - OpenShiftManagedCluster instance.
 description:
-  - 'Create, update and delete instance of Azure OpenShiftManagedCluster.'
+  - 'Create, update and delete instance of Azure Red Hat OpenShift.'
 options:
   resource_group:
     description:
@@ -834,10 +834,18 @@ class AzureRMOpenShiftManagedClusters(AzureRMModuleBaseExt):
 
         return False
 
+#    def random_id(self):
+#        import random
+#        return ''.join(random.choice('abcdefghijklmnopqrstuvwxyz0123456789') for _ in range(8))
+
+# Added per Mangirdas Judeikis (RED HAT INC) to fix first letter of cluster domain beginning with digit ; currently not supported
     def random_id(self):
         import random
-        return ''.join(random.choice('abcdefghijklmnopqrstuvwxyz0123456789') for _ in range(8))
-
+        random_id = (''.join(random.choice('abcdefghijklmnopqrstuvwxyz')) +
+                     ''.join(random.choice('abcdefghijklmnopqrstuvwxyz1234567890')
+                             for _ in range(7)))
+        return random_id
+###
     def set_default(self):
         if 'apiServerProfile' not in self.body['properties']:
             api_profile = dict(visibility="Public")
@@ -853,7 +861,6 @@ class AzureRMOpenShiftManagedClusters(AzureRMModuleBaseExt):
             self.body['properties']['workerProfiles'][0]['diskSizeGB'] = 128
         if 'vmSize' not in self.body['properties']['masterProfile']:
             self.body['properties']['masterProfile']['vmSize'] = "Standard_D8s_v3"
-
         if 'pullSecret' not in self.body['properties']['clusterProfile']:
             self.body['properties']['clusterProfile']['pullSecret'] = ''
         if 'resourceGroupId' not in self.body['properties']['clusterProfile']:
