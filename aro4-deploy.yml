@@ -43,7 +43,6 @@
       cluster_name: "ansible-cluster"
       cluster_pull_secret: "{{ lookup('file', '~/openshift/aro4/pull-secret.txt') }}"
 #      customdns: "some.domain.com"
-      customdns: ""
       master_vm_size: "Standard_D8s_v3"
       openshift_pull_secret: ""
       network_pod_cidr: "10.128.0.0/14"
