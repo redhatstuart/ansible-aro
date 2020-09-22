@@ -60,7 +60,6 @@
       privacy_ingress: "Public"
       resource_group: "aro4-ansible"
       sp_client_id: "X"
-      sp_object_id: "X"
       sp_secret: "X"
       worker_node_count: "4" 
       worker_vm_size: "Standard_D4s_v3"
@@ -124,7 +123,7 @@
   - name: Granting the ARO Service Principal access to the ARO virtual network
     azure.azcollection.azure_rm_roleassignment:
       scope: "/subscriptions/{{ lookup('env', 'AZURE_SUBSCRIPTION_ID') }}/resourceGroups/{{ resource_group }}/providers/Microsoft.Network/virtualNetworks/{{ aro_vnet }}"
-      assignee_object_id: "{{ sp_object_id }}"
+      assignee_object_id: "{{ sp_client_id }}"
       role_definition_id: "{{ oid }}"
       state: present
 
