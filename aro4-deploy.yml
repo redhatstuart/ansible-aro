@@ -32,6 +32,7 @@
 - name: Deploy Azure Red Hat OpenShift 4.x
   hosts: localhost
   connection: local
+  no_log: false
 
 # Roles declaration needed since ARO module is not part of azcollections yet
   roles:
@@ -42,6 +43,7 @@
 
   vars:
       # Customize These
+      app_object_id: "x"
       aro_master_subnet: "AROMasterSubnet"
       aro_master_subnet_cidr: "100.100.10.0/24"
       aro_vnet: "AROVNet"
@@ -49,7 +51,7 @@
       aro_worker_subnet: "AROWorkerSubnet"
       aro_worker_subnet_cidr: "100.100.20.0/24"
       azure_dc: "eastus"
-      cluster_name: "ansible-cluster"
+      cluster_name: "ansible-cluster2"
       cluster_pull_secret: "{{ lookup('file', '~/openshift/aro4/pull-secret.txt') }}"
 #      customdns: "aro.darmokholdings.com"
       master_vm_size: "Standard_D8s_v3"
@@ -58,9 +60,10 @@
       network_service_cidr: "172.30.0.0/16"
       privacy_api: "Public"
       privacy_ingress: "Public"
-      resource_group: "aro4-ansible"
-      sp_client_id: "X"
-      sp_secret: "X"
+      resource_group: "aro4-ansible2"
+      sp_client_id: "x"
+      sp_secret: "x"
+      sp_tenant_id: "72f988bf-86f1-41af-91ab-2d7cd011db47"
       worker_node_count: "4" 
       worker_vm_size: "Standard_D4s_v3"
 
@@ -113,19 +116,17 @@
     set_fact:
       oid: "{{ roledefoutput.ansible_facts.fact[0][0] }}"      
 
-  - name: Granting the ARO Resource Provider access to the ARO virtual network
+  - name: Granting the ARO Resource Provider Contributor access to the ARO virtual network
     azure.azcollection.azure_rm_roleassignment:
       scope: "/subscriptions/{{ lookup('env', 'AZURE_SUBSCRIPTION_ID') }}/resourceGroups/{{ resource_group }}/providers/Microsoft.Network/virtualNetworks/{{ aro_vnet }}"
       assignee_object_id: "50c17c64-bc11-4fdd-a339-0ecd396bf911"
       role_definition_id: "{{ oid }}"
-      state: present
 
-  - name: Granting the ARO Service Principal access to the ARO virtual network
+  - name: Granting the ARO AAD Application Object ID Contributor access to the ARO virtual network
     azure.azcollection.azure_rm_roleassignment:
       scope: "/subscriptions/{{ lookup('env', 'AZURE_SUBSCRIPTION_ID') }}/resourceGroups/{{ resource_group }}/providers/Microsoft.Network/virtualNetworks/{{ aro_vnet }}"
-      assignee_object_id: "{{ sp_client_id }}"
+      assignee_object_id: "{{ app_object_id }}"
       role_definition_id: "{{ oid }}"
-      state: present
 
   - name: Create Azure Red Hat OpenShift 4 Cluster
     azure_rm_openshiftmanagedcluster:
