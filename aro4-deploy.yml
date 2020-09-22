@@ -49,8 +49,6 @@
       aro_worker_subnet: "AROWorkerSubnet"
       aro_worker_subnet_cidr: "100.100.20.0/24"
       azure_dc: "eastus"
-      client_id: "X"
-      client_secret: "X"
       cluster_name: "ansible-cluster"
       cluster_pull_secret: "{{ lookup('file', '~/openshift/aro4/pull-secret.txt') }}"
 #      customdns: "aro.darmokholdings.com"
@@ -61,6 +59,9 @@
       privacy_api: "Public"
       privacy_ingress: "Public"
       resource_group: "aro4-ansible"
+      sp_client_id: "X"
+      sp_object_id: "X"
+      sp_secret: "X"
       worker_node_count: "4" 
       worker_vm_size: "Standard_D4s_v3"
 
@@ -120,6 +121,13 @@
       role_definition_id: "{{ oid }}"
       state: present
 
+  - name: Granting the ARO Service Principal access to the ARO virtual network
+    azure.azcollection.azure_rm_roleassignment:
+      scope: "/subscriptions/{{ lookup('env', 'AZURE_SUBSCRIPTION_ID') }}/resourceGroups/{{ resource_group }}/providers/Microsoft.Network/virtualNetworks/{{ aro_vnet }}"
+      assignee_object_id: "{{ sp_object_id }}"
+      role_definition_id: "{{ oid }}"
+      state: present
+
   - name: Create Azure Red Hat OpenShift 4 Cluster
     azure_rm_openshiftmanagedcluster:
       resource_group: "{{ resource_group }}"
@@ -140,8 +148,8 @@
         pod_cidr: "{{ network_pod_cidr }}"
         service_cidr: "{{ network_service_cidr }}"
       service_principal_profile:
-        client_id: "{{ client_id }}"
-        client_secret: "{{ client_secret }}"
+        client_id: "{{ sp_client_id }}"
+        client_secret: "{{ sp_secret }}"
       worker_profiles:
         - name: "worker"
           vm_size : "{{ worker_vm_size }}"
