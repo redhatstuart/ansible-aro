@@ -8,6 +8,7 @@
 # * Ansible's service principal must be an owner on the subscription in question - Contributor is not high enough access
 # * A service principal with Contributor permission on the active subscription must be used below which can be obtained from the Azure Linux CLI
 # * Pull secret must be read from a file due to the hidden characters that are placed inside a variable, including a carriage return, which will cause the deploy to fail
+# * You must populate the contents of aro4-secrets.yml
 #
 # To be fixed:
 #
@@ -40,8 +41,10 @@
   collections:
     - azure.azcollection
 
+  vars_files:
+    - ./aro4-secrets.yml
+
   vars:
-      app_object_id: "x"
       aro_master_subnet: "AROMasterSubnet"
       aro_master_subnet_cidr: "100.100.10.0/24"
       aro_vnet: "AROVNet"
@@ -59,9 +62,6 @@
       privacy_api: "Public"
       privacy_ingress: "Public"
       resource_group: "aro4-ansible"
-      sp_client_id: "x"
-      sp_secret: "x"
-      sp_tenant_id: "x"
       worker_node_count: "4"
       worker_vm_size: "Standard_D4s_v3"
 
