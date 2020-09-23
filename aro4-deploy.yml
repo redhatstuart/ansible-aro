@@ -32,7 +32,6 @@
 - name: Deploy Azure Red Hat OpenShift 4.x
   hosts: localhost
   connection: local
-  no_log: false
 
 # Roles declaration needed since ARO module is not part of azcollections yet
   roles:
@@ -51,20 +50,20 @@
       aro_worker_subnet: "AROWorkerSubnet"
       aro_worker_subnet_cidr: "100.100.20.0/24"
       azure_dc: "eastus"
-      cluster_name: "ansible-cluster2"
+      cluster_name: "aro-ansible-cluster"
       cluster_pull_secret: "{{ lookup('file', '~/openshift/aro4/pull-secret.txt') }}"
-#      customdns: "aro.darmokholdings.com"
+#      customdns: "aro.mycomain.com"
       master_vm_size: "Standard_D8s_v3"
       openshift_pull_secret: ""
       network_pod_cidr: "10.128.0.0/14"
       network_service_cidr: "172.30.0.0/16"
       privacy_api: "Public"
       privacy_ingress: "Public"
-      resource_group: "aro4-ansible2"
+      resource_group: "aro4-ansible"
       sp_client_id: "x"
       sp_secret: "x"
-      sp_tenant_id: "72f988bf-86f1-41af-91ab-2d7cd011db47"
-      worker_node_count: "4" 
+      sp_tenant_id: "x"
+      worker_node_count: "4"
       worker_vm_size: "Standard_D4s_v3"
 
   tasks:
