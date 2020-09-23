@@ -41,8 +41,7 @@
     - azure.azcollection
 
   vars:
-      # Customize These
-      app_object_id: "x"
+      app_object_id: "def7bbd5-3deb-4377-a1d6-286d40b252d4"
       aro_master_subnet: "AROMasterSubnet"
       aro_master_subnet_cidr: "100.100.10.0/24"
       aro_vnet: "AROVNet"
@@ -50,19 +49,19 @@
       aro_worker_subnet: "AROWorkerSubnet"
       aro_worker_subnet_cidr: "100.100.20.0/24"
       azure_dc: "eastus"
-      cluster_name: "aro-ansible-cluster"
+      cluster_name: "ansible-cluster2"
       cluster_pull_secret: "{{ lookup('file', '~/openshift/aro4/pull-secret.txt') }}"
-#      customdns: "aro.mycomain.com"
+#      customdns: "aro.darmokholdings.com"
       master_vm_size: "Standard_D8s_v3"
       openshift_pull_secret: ""
       network_pod_cidr: "10.128.0.0/14"
       network_service_cidr: "172.30.0.0/16"
       privacy_api: "Public"
       privacy_ingress: "Public"
-      resource_group: "aro4-ansible"
-      sp_client_id: "x"
-      sp_secret: "x"
-      sp_tenant_id: "x"
+      resource_group: "aro4-ansible2"
+      sp_client_id: "8a462032-5990-4cbf-a2ee-ea3a5622c85e"
+      sp_secret: "w3RJVW_0~YMvQF4j~YS~FU2R8_6Ai01q5z"
+      sp_tenant_id: "72f988bf-86f1-41af-91ab-2d7cd011db47"
       worker_node_count: "4"
       worker_vm_size: "Standard_D4s_v3"
 
@@ -86,7 +85,6 @@
       address_prefix: "{{ aro_master_subnet_cidr }}"
       virtual_network: "{{ aro_vnet }}"
       private_link_service_network_policies: Disabled
-      private_endpoint_network_policies: Enabled
       service_endpoints:
         - service: Microsoft.ContainerRegistry
 
@@ -155,7 +153,6 @@
           subnet_id: "/subscriptions/{{ lookup('env', 'AZURE_SUBSCRIPTION_ID') }}/resourceGroups/{{resource_group}}/providers/Microsoft.Network/virtualNetworks/{{ aro_vnet }}/subnets/{{ aro_worker_subnet }}"
 #          count: "{{ worker_node_count }}"
           count: 4
-    register: aroout
 
   - debug:
       msg: "Azure Red Hat OpenShift takes roughly 30-40 minutes to provision."
